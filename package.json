@@ -1,7 +1,7 @@
 {
   "name": "zotero-github-links",
   "type": "module",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Show GitHub repository links associated with Zotero items in the item details pane.",
   "config": {
     "addonName": "Zotero GitHub Links",
