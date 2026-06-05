@@ -1,4 +1,3 @@
-﻿item-section-head-text =
-    .label = GitHub Links
-item-section-sidenav-tooltip =
-    .tooltiptext = GitHub Links
+﻿github-url-section = GitHub URL
+    .label = GitHub URL
+    .tooltiptext = GitHub URL

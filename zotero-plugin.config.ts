@@ -1,4 +1,4 @@
-﻿import { defineConfig } from "zotero-plugin-scaffold";
+﻿import { defineConfig } from "./node_modules/zotero-plugin-scaffold/dist/index.js";
 import pkg from "./package.json";
 
 export default defineConfig({

@@ -5,19 +5,25 @@
 } from "./githubExtractor";
 import { getString } from "../utils/locale";
 
+const SECTION_TITLE = isChineseLocale() ? "GitHub 链接" : "GitHub URL";
+
 export function registerItemPaneSection() {
   Zotero.ItemPaneManager.registerSection({
     paneID: "github-links",
     pluginID: addon.data.config.addonID,
     header: {
-      l10nID: "zoterogithublinks-item-section-head-text",
+      l10nID: "zoterogithublinks-github-url-section",
+      label: SECTION_TITLE,
       icon: "chrome://zoterogithublinks/content/icons/github.svg",
-    },
+    } as any,
     sidenav: {
-      l10nID: "zoterogithublinks-item-section-sidenav-tooltip",
+      l10nID: "zoterogithublinks-github-url-section",
+      label: SECTION_TITLE,
+      tooltip: SECTION_TITLE,
       icon: "chrome://zoterogithublinks/content/icons/github.svg",
-    },
+    } as any,
     onRender: ({ body, item, setSectionSummary }) => {
+      ensureVisibleSectionTitle(body);
       renderSection(body, item, setSectionSummary, false);
     },
   });
@@ -79,6 +85,36 @@ function renderSection(
     });
 }
 
+function ensureVisibleSectionTitle(body: HTMLElement) {
+  const doc = body.ownerDocument;
+  if (!doc) return;
+  // Zotero 7/8/9 section DOM differs slightly between versions, so use a
+  // conservative nearest-container search. This is only a fallback for cases
+  // where the Fluent label is stripped by the scaffold build step.
+  const section =
+    body.closest(
+      '[data-pane-id="github-links"], [paneid="github-links"], section',
+    ) || body.parentElement;
+  if (!section) return;
+
+  const existingText = (section.textContent || "").trim();
+  if (existingText.includes(SECTION_TITLE)) return;
+
+  const icon = section.querySelector('img, image, .icon, [class*="icon"]');
+  const title = doc.createElement("span");
+  title.className = "zgl-header-title";
+  title.textContent = SECTION_TITLE;
+
+  if (icon?.parentElement) {
+    icon.parentElement.insertBefore(title, icon.nextSibling);
+  } else {
+    const header = section.querySelector(
+      'header, [class*="header"], [class*="head"]',
+    );
+    header?.prepend(title);
+  }
+}
+
 function createToolbar(
   body: HTMLElement,
   item: Zotero.Item | undefined,
@@ -127,4 +163,10 @@ function createMessage(body: HTMLElement, text: string) {
   div.className = "zgl-muted";
   div.textContent = text;
   return div;
+}
+
+function isChineseLocale() {
+  return String(Zotero.locale || "")
+    .toLowerCase()
+    .startsWith("zh");
 }

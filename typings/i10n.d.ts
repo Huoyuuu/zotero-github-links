@@ -9,7 +9,6 @@ export type FluentMessageId =
   | 'github-links-extracting'
   | 'github-links-refresh'
   | 'github-links-select-item'
-  | 'item-section-sidenav-tooltip'
   | 'pref-extract-from-pdf'
   | 'pref-help'
   | 'startup-finish';

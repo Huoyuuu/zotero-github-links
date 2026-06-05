@@ -1,4 +1,3 @@
-﻿item-section-head-text =
-    .label = 代码仓库
-item-section-sidenav-tooltip =
-    .tooltiptext = 代码仓库
+﻿github-url-section = GitHub 链接
+    .label = GitHub 链接
+    .tooltiptext = GitHub 链接

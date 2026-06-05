@@ -48,3 +48,9 @@
 .zgl-error {
   color: var(--accent-red, #cf222e);
 }
+
+.zgl-header-title {
+  margin-left: 6px;
+  font-weight: 600;
+  color: var(--fill-primary, currentColor);
+}
