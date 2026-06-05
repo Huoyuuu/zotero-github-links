@@ -8,12 +8,6 @@ export interface GitHubExtractionResult {
 
 const itemCache = new Map<string, string[]>();
 
-/**
- * Extract GitHub repository links from item metadata and, when enabled,
- * from already indexed / freshly indexed PDF full text. This never opens the
- * PDF reader; it relies on Zotero's Fulltext service first and has guarded
- * compatibility fallbacks for Zotero 7/8 API differences.
- */
 export async function extractGitHubLinks(
   item: Zotero.Item,
   forceRefresh = false,
@@ -31,6 +25,9 @@ export async function extractGitHubLinks(
     for (const attID of getPDFLikeAttachmentIDs(item)) {
       try {
         const text = await getAttachmentFulltext(attID);
+        Zotero.debug(
+          `[Zotero GitHub Links] Attachment ${attID} text length: ${text.length}`,
+        );
         addGitHubMatches(found, text);
       } catch (err) {
         Zotero.debug(
@@ -41,6 +38,7 @@ export async function extractGitHubLinks(
   }
 
   const links = [...found].sort((a, b) => a.localeCompare(b));
+  Zotero.debug(`[Zotero GitHub Links] Found ${links.length} link(s)`);
   itemCache.clear();
   itemCache.set(cacheKey, links);
   return { links, cacheKey, fromCache: false };
@@ -92,9 +90,8 @@ function safeGetField(item: Zotero.Item, field: string): string {
 
 async function getAttachmentFulltext(attID: number): Promise<string> {
   const Fulltext = Zotero.Fulltext as any;
+  const parts: string[] = [];
 
-  // Zotero 7/8 generally exposes Fulltext.isIndexed/indexItems for attachments.
-  // Some beta/nightly builds differ, so every call is guarded and logged.
   try {
     const indexed = await Fulltext.isIndexed?.(attID);
     if (!indexed && Fulltext.indexItems) {
@@ -105,34 +102,160 @@ async function getAttachmentFulltext(attID: number): Promise<string> {
   }
 
   const candidates = [
-    () => Fulltext.getItemText?.(attID),
-    () => Fulltext.getCachedItemText?.(attID),
-    () => Fulltext.getCachedPageText?.(attID),
+    ["getItemText", () => Fulltext.getItemText?.(attID)],
+    ["getCachedItemText", () => Fulltext.getCachedItemText?.(attID)],
+    ["getCachedPageText", () => Fulltext.getCachedPageText?.(attID)],
+    ["getPages", () => Fulltext.getPages?.(attID)],
+  ] as const;
+
+  for (const [name, reader] of candidates) {
+    try {
+      const value = await reader();
+      const text = stringifyFulltextValue(value);
+      if (text) {
+        Zotero.debug(
+          `[Zotero GitHub Links] Read ${text.length} chars via Zotero.Fulltext.${name}`,
+        );
+        parts.push(text);
+      }
+    } catch (err) {
+      Zotero.debug(`[Zotero GitHub Links] Fulltext.${name} failed: ${err}`);
+    }
+  }
+
+  const cacheText = await readFulltextCacheFile(attID);
+  if (cacheText) parts.push(cacheText);
+
+  const pdfWorkerText = await readViaPDFWorker(attID);
+  if (pdfWorkerText) parts.push(pdfWorkerText);
+
+  return parts.join("\n");
+}
+
+function stringifyFulltextValue(value: unknown): string {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(stringifyFulltextValue).join("\n");
+  if (typeof value === "object")
+    return Object.values(value).map(String).join("\n");
+  return String(value);
+}
+
+async function readFulltextCacheFile(attID: number): Promise<string> {
+  const Fulltext = Zotero.Fulltext as any;
+  const att = Zotero.Items.get(attID);
+  const candidates = [
+    () => Fulltext.getItemProcessorCacheFile?.(att),
+    () => Fulltext.getItemProcessorCacheFile?.(attID),
+    () => Fulltext.getProcessorCacheFile?.(att),
+    () => Fulltext.getProcessorCacheFile?.(attID),
+    () => Fulltext.getCacheFile?.(att),
+    () => Fulltext.getCacheFile?.(attID),
+  ];
+
+  for (const getFile of candidates) {
+    try {
+      const file = await getFile();
+      const path = file?.path || file;
+      if (typeof path !== "string") continue;
+      const text = await readUTF8File(path);
+      if (text) {
+        Zotero.debug(
+          `[Zotero GitHub Links] Read ${text.length} chars from fulltext cache ${path}`,
+        );
+        return text;
+      }
+    } catch (err) {
+      Zotero.debug(`[Zotero GitHub Links] Fulltext cache read failed: ${err}`);
+    }
+  }
+  return "";
+}
+
+async function readViaPDFWorker(attID: number): Promise<string> {
+  const PDFWorker = Zotero.PDFWorker as any;
+  const att = Zotero.Items.get(attID) as any;
+  const path = await getAttachmentPath(att);
+  const candidates = [
+    () => PDFWorker.getFullText?.(attID),
+    () => PDFWorker.getFullText?.(att),
+    () => PDFWorker.getFullText?.(path),
+    () => PDFWorker.extractText?.(path),
+    () => PDFWorker.getText?.(path),
   ];
 
   for (const reader of candidates) {
     try {
-      const value = await reader();
-      if (typeof value === "string") return value;
-      if (Array.isArray(value)) return value.join("\n");
-      if (value && typeof value === "object") {
-        return Object.values(value).join("\n");
+      const text = stringifyFulltextValue(await reader());
+      if (text) {
+        Zotero.debug(
+          `[Zotero GitHub Links] Read ${text.length} chars via PDFWorker fallback`,
+        );
+        return text;
       }
     } catch (err) {
-      Zotero.debug(`[Zotero GitHub Links] Fulltext reader failed: ${err}`);
+      Zotero.debug(`[Zotero GitHub Links] PDFWorker fallback failed: ${err}`);
     }
   }
+  return "";
+}
 
-  // If the Fulltext API surface changes, prefer not to block the item pane.
-  // Future fallback can use Zotero.PDFWorker or attachment file path extraction.
+async function getAttachmentPath(att: Zotero.Item | false): Promise<string> {
+  if (!att) return "";
+  try {
+    return String((await (att as any).getFilePathAsync?.()) || "");
+  } catch (_) {
+    return String((att as any).attachmentPath || "");
+  }
+}
+
+async function readUTF8File(path: string): Promise<string> {
+  try {
+    if (typeof IOUtils !== "undefined") {
+      return await IOUtils.readUTF8(path);
+    }
+  } catch (_) {
+    // Fall through to OS.File if available.
+  }
+  try {
+    const OS = (ChromeUtils as any).importESModule?.(
+      "resource://gre/modules/osfile.sys.mjs",
+    )?.OS;
+    if (OS?.File?.read) {
+      const bytes = await OS.File.read(path);
+      return new TextDecoder().decode(bytes);
+    }
+  } catch (err) {
+    Zotero.debug(`[Zotero GitHub Links] UTF-8 file read failed: ${err}`);
+  }
   return "";
 }
 
 export function addGitHubMatches(target: Set<string>, text: string) {
-  const regex = /https?:\/\/github\.com\/[\w.-]+\/[\w.-]+/gi;
-  for (const match of text.matchAll(regex)) {
+  if (!text) return;
+
+  // Normal URL in metadata or raw full-text cache.
+  const normal = /https?:\/\/github\.com\/[\w.-]+\/[\w.-]+/gi;
+  for (const match of text.matchAll(normal)) {
     target.add(normalizeGitHubURL(match[0]));
   }
+
+  // Zotero 9 fulltext indexing can expose tokenized text where punctuation is
+  // removed, e.g. "https github com owner repo". Rebuild those conservatively.
+  const tokenized =
+    /(?:https?\s+)?github\s+(?:com\s+)?([a-z0-9][\w.-]{0,38})\s+([a-z0-9][\w.-]{0,100})/gi;
+  for (const match of text.matchAll(tokenized)) {
+    const owner = match[1];
+    const repo = match[2];
+    if (isLikelyNonRepoToken(owner) || isLikelyNonRepoToken(repo)) continue;
+    target.add(`https://github.com/${owner}/${repo}`);
+  }
+}
+
+function isLikelyNonRepoToken(token: string): boolean {
+  return /^(com|www|http|https|doi|org|the|and|for|with|from|permission|copyright|code|available)$/i.test(
+    token,
+  );
 }
 
 function normalizeGitHubURL(url: string): string {
