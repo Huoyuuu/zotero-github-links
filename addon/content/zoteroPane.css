@@ -1,0 +1,50 @@
+﻿.zotero-github-links-section {
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.zgl-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.zgl-button {
+  min-width: 24px;
+  min-height: 22px;
+  border: 1px solid var(--material-border-quinary, #d0d7de);
+  border-radius: 4px;
+  background: var(--material-background, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+
+.zgl-button:hover {
+  background: var(--material-button-hover, rgba(0, 0, 0, 0.06));
+}
+
+.zgl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.zgl-row a {
+  color: var(--accent-blue, #0969da);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.zgl-row a:hover {
+  text-decoration: underline;
+}
+
+.zgl-muted {
+  color: var(--text-secondary, #6e7781);
+}
+
+.zgl-error {
+  color: var(--accent-red, #cf222e);
+}
