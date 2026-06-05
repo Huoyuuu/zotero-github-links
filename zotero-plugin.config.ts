@@ -1,4 +1,4 @@
-﻿import { defineConfig } from "./node_modules/zotero-plugin-scaffold/dist/index.mjs";
+﻿import { defineConfig } from "zotero-plugin-scaffold";
 import pkg from "./package.json";
 
 export default defineConfig({
@@ -46,4 +46,3 @@ export default defineConfig({
   // If you need to see a more detailed log, uncomment the following line:
   // logLevel: "trace",
 });
-

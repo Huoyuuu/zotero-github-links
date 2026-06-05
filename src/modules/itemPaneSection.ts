@@ -1,4 +1,8 @@
-﻿import { clearGitHubLinksCache, displayLabel, extractGitHubLinks } from "./githubExtractor";
+﻿import {
+  clearGitHubLinksCache,
+  displayLabel,
+  extractGitHubLinks,
+} from "./githubExtractor";
 import { getString } from "../utils/locale";
 
 export function registerItemPaneSection() {
@@ -89,7 +93,9 @@ function createToolbar(
     const { links } = await extractGitHubLinks(item);
     const helper = (Components.classes as any)[
       "@mozilla.org/widget/clipboardhelper;1"
-    ].getService(Components.interfaces.nsIClipboardHelper) as nsIClipboardHelper;
+    ].getService(
+      Components.interfaces.nsIClipboardHelper,
+    ) as nsIClipboardHelper;
     helper.copyString(links.join("\n"));
   });
 
@@ -122,4 +128,3 @@ function createMessage(body: HTMLElement, text: string) {
   div.textContent = text;
   return div;
 }
-

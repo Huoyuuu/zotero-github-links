@@ -54,22 +54,32 @@ function buildCacheKey(item: Zotero.Item): string {
   const parts = [String(item.id), String((item as any).dateModified || "")];
   for (const attID of getPDFLikeAttachmentIDs(item)) {
     const att = Zotero.Items.get(attID) as any;
-    parts.push(`${attID}:${att?.dateModified || ""}:${att?.attachmentModificationTime || ""}`);
+    parts.push(
+      `${attID}:${att?.dateModified || ""}:${att?.attachmentModificationTime || ""}`,
+    );
   }
   return parts.join("|");
 }
 
 function getPDFLikeAttachmentIDs(item: Zotero.Item): number[] {
   if (!item?.isRegularItem?.()) return [];
-  return item.getAttachments().filter((attID) => isPDFAttachment(Zotero.Items.get(attID)));
+  return item
+    .getAttachments()
+    .filter((attID) => isPDFAttachment(Zotero.Items.get(attID)));
 }
 
-function isPDFAttachment(att: Zotero.Item | false | undefined): att is Zotero.Item {
+function isPDFAttachment(
+  att: Zotero.Item | false | undefined,
+): att is Zotero.Item {
   if (!att) return false;
   try {
     if (att.isPDFAttachment?.()) return true;
-  } catch (_) {}
-  return String((att as any).attachmentFilename || "").toLowerCase().endsWith(".pdf");
+  } catch (err) {
+    Zotero.debug(`[Zotero GitHub Links] PDF attachment check failed: ${err}`);
+  }
+  return String((att as any).attachmentFilename || "")
+    .toLowerCase()
+    .endsWith(".pdf");
 }
 
 function safeGetField(item: Zotero.Item, field: string): string {
@@ -105,8 +115,12 @@ async function getAttachmentFulltext(attID: number): Promise<string> {
       const value = await reader();
       if (typeof value === "string") return value;
       if (Array.isArray(value)) return value.join("\n");
-      if (value && typeof value === "object") return Object.values(value).join("\n");
-    } catch (_) {}
+      if (value && typeof value === "object") {
+        return Object.values(value).join("\n");
+      }
+    } catch (err) {
+      Zotero.debug(`[Zotero GitHub Links] Fulltext reader failed: ${err}`);
+    }
   }
 
   // If the Fulltext API surface changes, prefer not to block the item pane.
@@ -128,7 +142,9 @@ function normalizeGitHubURL(url: string): string {
 export function displayLabel(url: string): string {
   try {
     const u = new URL(url);
-    return u.pathname.replace(/^\//, "").split("/").slice(0, 2).join("/") || url;
+    return (
+      u.pathname.replace(/^\//, "").split("/").slice(0, 2).join("/") || url
+    );
   } catch (_) {
     return url;
   }

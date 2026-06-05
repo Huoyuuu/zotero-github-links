@@ -57,5 +57,3 @@ export default {
   onShortcuts: () => undefined,
   onDialogEvents: () => undefined,
 };
-
-

@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "zotero-github-links",
   "type": "module",
   "version": "1.0.0",
@@ -10,9 +10,14 @@
     "addonInstance": "ZoteroGitHubLinks",
     "prefsPrefix": "extensions.zotero.githublinks"
   },
-  "repository": { "type": "git", "url": "git+https://github.com/huoyuuu/zotero-github-links.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huoyuuu/zotero-github-links.git"
+  },
   "author": "Codex",
-  "bugs": { "url": "https://github.com/huoyuuu/zotero-github-links/issues" },
+  "bugs": {
+    "url": "https://github.com/huoyuuu/zotero-github-links/issues"
+  },
   "homepage": "https://github.com/huoyuuu/zotero-github-links",
   "license": "AGPL-3.0-or-later",
   "scripts": {
@@ -24,7 +29,9 @@
     "test": "zotero-plugin test",
     "update-deps": "npm update --save"
   },
-  "dependencies": { "zotero-plugin-toolkit": "^5.1.0-beta.13" },
+  "dependencies": {
+    "zotero-plugin-toolkit": "^5.1.0-beta.13"
+  },
   "devDependencies": {
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
@@ -35,9 +42,22 @@
     "mocha": "^11.7.5",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",
-    "zotero-plugin-scaffold": "^0.8.2",
+    "zotero-plugin-scaffold": "^0.8.6",
     "zotero-types": "^4.1.0-beta.4"
   },
-  "prettier": { "printWidth": 80, "tabWidth": 2, "endOfLine": "lf", "overrides": [{ "files": ["*.xhtml"], "options": { "htmlWhitespaceSensitivity": "css" } }] }
+  "prettier": {
+    "printWidth": 80,
+    "tabWidth": 2,
+    "endOfLine": "lf",
+    "overrides": [
+      {
+        "files": [
+          "*.xhtml"
+        ],
+        "options": {
+          "htmlWhitespaceSensitivity": "css"
+        }
+      }
+    ]
+  }
 }
-
